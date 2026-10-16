@@ -5,7 +5,7 @@
 > ONNX Runtime（CPU / CUDA）、OpenVINO、TensorRT、MNN、**onnxcl（OpenCL 直读 ONNX）**、
 > **RKNN（瑞芯微 NPU）** 之上，并提供 **C++ / JNI(Java) / Python** 三种用法。
 >
-> 更新日期：2026-10-15。本版新增 **onnxcl**（自包含 OpenCL 推理，无需 CUDA/ORT）与
+> 更新日期：2026-10-16。本版新增 **onnxcl**（自包含 OpenCL 推理，无需 CUDA/ORT）与
 > **RKNN**（RK3576/RK3588 板端 NPU）两个后端。
 >
 > 📚 **完整文档见 [`docs/`](docs/README.md)**：每个后端的编译方式、JNI/Python 打包、
@@ -13,8 +13,47 @@
 
 ---
 
+## 定位说明
+
+**libFastYolo 不是推理引擎，也没有自己实现任何算子、图优化器或硬件 kernel。** 所有前向计算都交给
+下面的第三方引擎完成。它本身是一个 C++20 适配层，价值全部落在**抹平调用侧的差异**上。
+
+**它要解决的具体麻烦**：同一个 YOLO 模型，在不同语言、不同平台、不同后端上的加载方式、输入约定、
+输出张量布局、后处理 API 都不一样。
+
+- **语言不一致**：C++ 用 `Ort::Session`、Java 要 JNI 再包一层、Python 用 `onnxruntime` 或 `cv2.dnn`
+  ——同一套推理逻辑得写三遍，还得各自维护。
+- **平台不一致**：x86 服务器用 CUDA，ARM 板端用 NPU，只有核显的机器只能吃 OpenCL——三套 SDK、三套编译链。
+- **后端不一致**：TensorRT 要先把 `.onnx` 转成 `.engine`，MNN 要转 `.mnn`，RKNN 要转 `.rknn`；
+  解码器还得分别适配 v8 头 `[1,C,N]`、端到端 `[1,N,6]`、SEG 双输出等不同输出布局。
+
+**结果就是：换一次引擎，业务代码里散落的加载、预处理、解码、设备选择全都要跟着改。**
+
+本项目把这件事压缩成**只改一个 CMake 开关**。业务侧永远只调用 `YOLOInference::predict()` 与
+`track()` 这一套接口，后端差异被 C ABI 边界挡在库内部（见 [三层屏蔽设计](#2-三层屏蔽设计)）。
+
+一句话：**它省的是"换引擎时改代码"的成本，不是"换引擎"本身的成本。**
+
+### 关于第三方依赖
+
+除 `onnxcl` 外，所有后端都是对第三方引擎的封装。ONNX Runtime、OpenVINO、TensorRT、MNN、RKNN 的
+运行时与 SDK **均不随本项目分发**，需自行获取并遵守各自的许可（见文末[许可说明](#许可说明)）。
+
+**唯一不依赖任何第三方推理引擎的是 `onnxcl` 后端**——它自包含 OpenCL 实现，直接读 `.onnx`，
+不需要 ONNX Runtime、不需要 CUDA、也不需要单独安装 OpenCL SDK。
+
+> ⚠️ **但请注意：onnxcl 的成熟度和其他后端不在一个量级。**
+> 它由作者本人维护，目前主要用于开发期自测——覆盖面有限、真实场景验证不足，
+> **作者也不确定还有哪些坑。**
+>
+> 生产环境建议优先选择有成熟社区支撑的 ONNX Runtime / OpenVINO / TensorRT / MNN / RKNN；
+> onnxcl 更适合开发调试，或"只有核显、不想装 CUDA 与 ORT"的轻量场景。
+
+---
+
 ## 目录
 
+- [定位说明](#定位说明)
 - [1. 能力总览](#1-能力总览)
 - [2. 三层屏蔽设计](#2-三层屏蔽设计)
 - [3. 后端矩阵](#3-后端矩阵)
@@ -56,6 +95,9 @@
 
 后端**六选一**，优先级 `MNN > TENSORRT > OPENVINO > RKNN > ONNXCL > 兜底 ONNX`；
 `JNI_BACKEND` / `PYTHON_BACKEND` 可与任意后端叠加。
+
+> 除 `onnxcl` 外的后端都是对第三方引擎的封装；`onnxcl` 是自包含 OpenCL 实现、不依赖任何第三方运行时，
+> 但由作者自行维护、成熟度低于其他后端，详见 [定位说明](#定位说明)。
 
 > 选型建议与各后端编译方式：[`docs/backend/README.md`](docs/backend/README.md)
 
