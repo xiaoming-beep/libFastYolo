@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastyolo"
+version = "0.1.0"
+description = "Python SDK for libFastYolo: YOLO detection + ByteTrack tracking (ctypes binding)"
+readme = "README.md"
+requires-python = ">=3.8"
+# openvino 提供运行时 DLL（精简 wheel 布局下由 _loader 自动定位其 libs 目录）
+dependencies = ["numpy>=1.17", "Pillow>=9.0", "openvino>=2024.0"]
+
+[tool.setuptools]
+packages = ["fastyolo"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+fastyolo = ["libs/*.dll", "libs/*.so", "libs/*.so.*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

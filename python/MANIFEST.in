@@ -1,0 +1,2 @@
+# 保证动态库资产进入 sdist/wheel（setuptools 无 SCM 时依赖 MANIFEST.in）
+recursive-include fastyolo/libs *.dll *.so *.so.*
