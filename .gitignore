@@ -1,11 +1,53 @@
 /source/backend/onnx/lib/
-cmake-build-*/
+
+# C++ / CMake 构建目录
+# 注意：故意用 / 锚定到仓库根，避免误伤 docs/build（那是文档源码）
+/build/
+/build-*/
+/cmake-build-*/
+
+# CMake 生成的文件
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+cmake_install.cmake
+CTestTestfile.cmake
+build.ninja
+.ninja_deps
+.ninja_log
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+
+# 编译中间产物
+*.o
+*.obj
+*.a
+*.lib
+*.exp
+*.pdb
+*.ilk
+
+# 链接产物
+*.so
+*.dylib
+*.dll
+*.pyd
+*.exe
+
+# Java 构建产物
+*.class
+*.jar
 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+python/build/
+python/dist/
+*.whl
 
 # IDE
 .idea/
