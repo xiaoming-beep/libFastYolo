@@ -1,2 +1,11 @@
 /source/backend/onnx/lib/
-/cmake-build-debug
+cmake-build-*/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# IDE
+.idea/
